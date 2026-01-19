@@ -1,0 +1,11 @@
+{
+  "name": "bullmq-pro-frontend",
+  "version": "1.0.0",
+  "description": "Frontend for testing BullMQ Pro",
+  "scripts": {
+    "dev": "npx serve -p 3000"
+  },
+  "devDependencies": {
+    "serve": "^14.2.1"
+  }
+}

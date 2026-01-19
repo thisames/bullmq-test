@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BullMQ Pro Test Dashboard</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #1a1a2e;
+      color: #eee;
+      padding: 20px;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #00d9ff;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .controls {
+      background: #16213e;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+
+    .controls h2 {
+      margin-bottom: 15px;
+      color: #00d9ff;
+    }
+
+    .control-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .control-row label {
+      color: #aaa;
+    }
+
+    input, select {
+      padding: 8px 12px;
+      border: 1px solid #444;
+      border-radius: 4px;
+      background: #0f0f23;
+      color: #eee;
+      font-size: 14px;
+    }
+
+    button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: opacity 0.2s;
+    }
+
+    button:hover {
+      opacity: 0.8;
+    }
+
+    .btn-primary {
+      background: #00d9ff;
+      color: #000;
+    }
+
+    .btn-warning {
+      background: #ffc107;
+      color: #000;
+    }
+
+    .btn-success {
+      background: #28a745;
+      color: #fff;
+    }
+
+    .btn-danger {
+      background: #dc3545;
+      color: #fff;
+    }
+
+    .btn-secondary {
+      background: #6c757d;
+      color: #fff;
+    }
+
+    .queues-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+
+    .queue-section {
+      background: #16213e;
+      border-radius: 8px;
+      padding: 15px;
+    }
+
+    .queue-section h3 {
+      margin-bottom: 10px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #333;
+    }
+
+    .queue-section h3 .count {
+      font-size: 14px;
+      color: #888;
+      font-weight: normal;
+    }
+
+    .waiting h3 { color: #ffc107; }
+    .active h3 { color: #17a2b8; }
+    .delayed h3 { color: #fd7e14; }
+    .paused h3 { color: #6c757d; }
+    .completed h3 { color: #28a745; }
+    .failed h3 { color: #dc3545; }
+
+    .job-list {
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .job-card {
+      background: #0f0f23;
+      border-radius: 4px;
+      padding: 10px;
+      margin-bottom: 8px;
+      font-size: 13px;
+    }
+
+    .job-card .job-id {
+      font-weight: bold;
+      color: #00d9ff;
+    }
+
+    .job-card .job-name {
+      color: #aaa;
+    }
+
+    .job-card .job-group {
+      color: #ff6b6b;
+      font-size: 12px;
+    }
+
+    .job-card .job-delay {
+      color: #fd7e14;
+      font-size: 12px;
+    }
+
+    .events-section {
+      background: #16213e;
+      border-radius: 8px;
+      padding: 15px;
+    }
+
+    .events-section h3 {
+      margin-bottom: 10px;
+      color: #00d9ff;
+    }
+
+    .event-list {
+      max-height: 250px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 12px;
+    }
+
+    .event-item {
+      padding: 5px 8px;
+      margin-bottom: 4px;
+      background: #0f0f23;
+      border-radius: 3px;
+      border-left: 3px solid #444;
+    }
+
+    .event-item.added { border-color: #00d9ff; }
+    .event-item.processing { border-color: #17a2b8; }
+    .event-item.completed { border-color: #28a745; }
+    .event-item.failed { border-color: #dc3545; }
+    .event-item.group-paused { border-color: #ffc107; }
+    .event-item.group-resumed { border-color: #28a745; }
+
+    .event-time {
+      color: #666;
+    }
+
+    .event-type {
+      font-weight: bold;
+      margin-left: 10px;
+    }
+
+    .status-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #16213e;
+      padding: 10px 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #28a745;
+    }
+
+    .status-dot.disconnected {
+      background: #dc3545;
+    }
+
+    .empty-state {
+      color: #666;
+      font-style: italic;
+      padding: 10px;
+      text-align: center;
+    }
+
+    .group-card {
+      background: #0f0f23;
+      border-radius: 4px;
+      padding: 10px 15px;
+      font-size: 13px;
+      border-left: 3px solid #444;
+    }
+
+    .group-card.waiting { border-color: #ffc107; }
+    .group-card.limited { border-color: #17a2b8; }
+    .group-card.maxed { border-color: #fd7e14; }
+    .group-card.paused { border-color: #dc3545; }
+
+    .group-card .group-id {
+      font-weight: bold;
+      color: #00d9ff;
+    }
+
+    .group-card .group-status {
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 3px;
+      margin-left: 8px;
+    }
+
+    .group-card .group-status.waiting { background: #ffc107; color: #000; }
+    .group-card .group-status.limited { background: #17a2b8; color: #fff; }
+    .group-card .group-status.maxed { background: #fd7e14; color: #000; }
+    .group-card .group-status.paused { background: #dc3545; color: #fff; }
+
+    .group-card .group-jobs {
+      color: #888;
+      font-size: 12px;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>BullMQ Pro Test Dashboard</h1>
+
+    <div class="status-bar">
+      <div class="status-indicator">
+        <div class="status-dot" id="sseStatus"></div>
+        <span id="sseStatusText">Conectando...</span>
+      </div>
+      <button class="btn-secondary" onclick="refreshJobs()">Atualizar Jobs</button>
+    </div>
+
+    <div class="controls">
+      <h2>Controles</h2>
+
+      <div class="control-row">
+        <label>Group ID:</label>
+        <input type="text" id="groupId" placeholder="ex: group-a" value="group-a">
+
+        <label>Delay (ms):</label>
+        <input type="number" id="delay" placeholder="ex: 5000" value="5000">
+
+        <label>Qtd Jobs:</label>
+        <input type="number" id="jobCount" value="5" min="1" max="20">
+
+        <label>Incremento Delay:</label>
+        <input type="number" id="delayIncrement" value="1000">
+      </div>
+
+      <div class="control-row">
+        <button class="btn-primary" onclick="addSingleJob()">Adicionar 1 Job</button>
+        <button class="btn-primary" onclick="addBatchJobs()">Adicionar Batch</button>
+        <button class="btn-warning" onclick="pauseGroup()">Pausar Grupo</button>
+        <button class="btn-success" onclick="resumeGroup()">Resumir Grupo</button>
+        <button class="btn-danger" onclick="clearQueue()">Limpar Queue</button>
+      </div>
+
+      <div class="control-row">
+        <button class="btn-warning" onclick="pauseWorker()">Pausar Worker</button>
+        <button class="btn-success" onclick="resumeWorker()">Resumir Worker</button>
+        <button class="btn-secondary" onclick="checkGroupStatus()">Verificar Status do Grupo</button>
+      </div>
+
+      <div class="control-row">
+        <h4>Cenario de Teste Rapido:</h4>
+      </div>
+      <div class="control-row">
+        <button class="btn-primary" onclick="testScenario1()">Teste 1: Jobs Delayed + Pausar Grupo</button>
+        <button class="btn-primary" onclick="testScenario2()">Teste 2: Multiplos Grupos</button>
+      </div>
+    </div>
+
+    <div class="groups-section" style="background: #16213e; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+      <h3 style="color: #00d9ff; margin-bottom: 10px;">Grupos <span id="groupsCount" style="font-size: 14px; color: #888; font-weight: normal;"></span></h3>
+      <div id="groupsList" style="display: flex; flex-wrap: wrap; gap: 10px;"></div>
+    </div>
+
+    <div class="queues-grid">
+      <div class="queue-section waiting">
+        <h3>Waiting <span class="count" id="waitingCount">(0)</span></h3>
+        <div class="job-list" id="waitingJobs"></div>
+      </div>
+
+      <div class="queue-section active">
+        <h3>Active <span class="count" id="activeCount">(0)</span></h3>
+        <div class="job-list" id="activeJobs"></div>
+      </div>
+
+      <div class="queue-section delayed">
+        <h3>Delayed <span class="count" id="delayedCount">(0)</span></h3>
+        <div class="job-list" id="delayedJobs"></div>
+      </div>
+
+      <div class="queue-section paused">
+        <h3>Paused <span class="count" id="pausedCount">(0)</span></h3>
+        <div class="job-list" id="pausedJobs"></div>
+      </div>
+
+      <div class="queue-section completed">
+        <h3>Completed <span class="count" id="completedCount">(0)</span></h3>
+        <div class="job-list" id="completedJobs"></div>
+      </div>
+
+      <div class="queue-section failed">
+        <h3>Failed <span class="count" id="failedCount">(0)</span></h3>
+        <div class="job-list" id="failedJobs"></div>
+      </div>
+    </div>
+
+    <div class="events-section">
+      <h3>Eventos em Tempo Real</h3>
+      <div class="event-list" id="eventList"></div>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = 'http://localhost:3001';
+    let eventSource = null;
+
+    // SSE Connection
+    function connectSSE() {
+      eventSource = new EventSource(`${API_URL}/events/stream`);
+
+      eventSource.onopen = () => {
+        document.getElementById('sseStatus').classList.remove('disconnected');
+        document.getElementById('sseStatusText').textContent = 'Conectado';
+      };
+
+      eventSource.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        addEventToList(data);
+        refreshJobs();
+      };
+
+      eventSource.onerror = () => {
+        document.getElementById('sseStatus').classList.add('disconnected');
+        document.getElementById('sseStatusText').textContent = 'Desconectado - Reconectando...';
+      };
+    }
+
+    function addEventToList(event) {
+      const eventList = document.getElementById('eventList');
+      const time = new Date(event.timestamp).toLocaleTimeString();
+      const div = document.createElement('div');
+      div.className = `event-item ${event.type}`;
+      div.innerHTML = `
+        <span class="event-time">${time}</span>
+        <span class="event-type">${event.type}</span>
+        <span class="event-data">${JSON.stringify(event.data)}</span>
+      `;
+      eventList.insertBefore(div, eventList.firstChild);
+
+      // Limitar a 50 eventos
+      while (eventList.children.length > 50) {
+        eventList.removeChild(eventList.lastChild);
+      }
+    }
+
+    // API Calls
+    async function apiCall(endpoint, method = 'GET', body = null) {
+      const options = {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+      };
+      if (body) {
+        options.body = JSON.stringify(body);
+      }
+      const response = await fetch(`${API_URL}${endpoint}`, options);
+      return response.json();
+    }
+
+    async function refreshJobs() {
+      try {
+        const jobs = await apiCall('/jobs');
+        renderJobs('waiting', jobs.waiting);
+        renderJobs('active', jobs.active);
+        renderJobs('delayed', jobs.delayed);
+        renderJobs('paused', jobs.paused);
+        renderJobs('completed', jobs.completed);
+        renderJobs('failed', jobs.failed);
+
+        // Atualizar grupos
+        await refreshGroups();
+      } catch (error) {
+        console.error('Erro ao buscar jobs:', error);
+      }
+    }
+
+    async function refreshGroups() {
+      try {
+        const groups = await apiCall('/groups');
+        const container = document.getElementById('groupsList');
+        const countEl = document.getElementById('groupsCount');
+
+        countEl.textContent = `(${groups.length} grupos)`;
+
+        if (groups.length === 0) {
+          container.innerHTML = '<div class="empty-state">Nenhum grupo</div>';
+          return;
+        }
+
+        container.innerHTML = groups.map(group => `
+          <div class="group-card ${group.status}">
+            <span class="group-id">${group.id}</span>
+            <span class="group-status ${group.status}">${group.status.toUpperCase()}</span>
+            <div class="group-jobs">
+              ${group.jobsCount} waiting | ${group.delayedJobsCount} delayed | ${group.totalJobsCount} total
+            </div>
+          </div>
+        `).join('');
+      } catch (error) {
+        console.error('Erro ao buscar grupos:', error);
+      }
+    }
+
+    function renderJobs(type, jobs) {
+      const container = document.getElementById(`${type}Jobs`);
+      const countEl = document.getElementById(`${type}Count`);
+      countEl.textContent = `(${jobs.length})`;
+
+      if (jobs.length === 0) {
+        container.innerHTML = '<div class="empty-state">Nenhum job</div>';
+        return;
+      }
+
+      container.innerHTML = jobs.map(job => {
+        let delayText = '';
+        if (job.delayRemaining !== undefined && job.delayRemaining > 0) {
+          const seconds = Math.ceil(job.delayRemaining / 1000);
+          delayText = `<div class="job-delay">Delay restante: ${seconds}s</div>`;
+        } else if (job.delay) {
+          delayText = `<div class="job-delay">Delay original: ${job.delay}ms</div>`;
+        }
+        return `
+          <div class="job-card">
+            <div class="job-id">ID: ${job.id}</div>
+            <div class="job-name">${job.name}</div>
+            ${job.group ? `<div class="job-group">Group: ${job.group}</div>` : ''}
+            ${delayText}
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Actions
+    async function addSingleJob() {
+      const groupId = document.getElementById('groupId').value || undefined;
+      const delay = parseInt(document.getElementById('delay').value) || undefined;
+      await apiCall('/jobs', 'POST', { name: 'single-job', data: { test: true }, groupId, delay });
+      refreshJobs();
+    }
+
+    async function addBatchJobs() {
+      const groupId = document.getElementById('groupId').value || undefined;
+      const delay = parseInt(document.getElementById('delay').value) || undefined;
+      const count = parseInt(document.getElementById('jobCount').value) || 5;
+      const delayIncrement = parseInt(document.getElementById('delayIncrement').value) || 0;
+      await apiCall('/jobs/batch', 'POST', { count, groupId, delay, delayIncrement });
+      refreshJobs();
+    }
+
+    async function pauseGroup() {
+      const groupId = document.getElementById('groupId').value;
+      if (!groupId) {
+        alert('Informe um Group ID');
+        return;
+      }
+      await apiCall(`/groups/${groupId}/pause`, 'POST');
+      refreshJobs();
+    }
+
+    async function resumeGroup() {
+      const groupId = document.getElementById('groupId').value;
+      if (!groupId) {
+        alert('Informe um Group ID');
+        return;
+      }
+      await apiCall(`/groups/${groupId}/resume`, 'POST');
+      refreshJobs();
+    }
+
+    async function checkGroupStatus() {
+      const groupId = document.getElementById('groupId').value;
+      if (!groupId) {
+        alert('Informe um Group ID');
+        return;
+      }
+      const status = await apiCall(`/groups/${groupId}/status`);
+      alert(`Group ${groupId} status: ${JSON.stringify(status)}`);
+    }
+
+    async function pauseWorker() {
+      await apiCall('/worker/pause', 'POST');
+      addEventToList({ timestamp: new Date(), type: 'worker-paused', data: {} });
+    }
+
+    async function resumeWorker() {
+      await apiCall('/worker/resume', 'POST');
+      addEventToList({ timestamp: new Date(), type: 'worker-resumed', data: {} });
+    }
+
+    async function clearQueue() {
+      if (confirm('Tem certeza que deseja limpar toda a queue?')) {
+        await apiCall('/jobs', 'DELETE');
+        refreshJobs();
+      }
+    }
+
+    // Test Scenarios
+    async function testScenario1() {
+      // Cenario: Criar jobs delayed em um grupo, depois pausar o grupo
+      const groupId = 'test-group-1';
+      document.getElementById('groupId').value = groupId;
+
+      addEventToList({ timestamp: new Date(), type: 'info', data: { message: 'Iniciando Cenario 1: Jobs Delayed + Pausar Grupo' } });
+
+      // Adicionar 5 jobs com delay escalonado
+      await apiCall('/jobs/batch', 'POST', { count: 5, groupId, delay: 3000, delayIncrement: 2000 });
+
+      addEventToList({ timestamp: new Date(), type: 'info', data: { message: 'Jobs criados. Aguarde os jobs moverem para delayed, depois clique em Pausar Grupo para ver o efeito.' } });
+
+      refreshJobs();
+    }
+
+    async function testScenario2() {
+      // Cenario: Multiplos grupos com jobs
+      addEventToList({ timestamp: new Date(), type: 'info', data: { message: 'Iniciando Cenario 2: Multiplos Grupos' } });
+
+      // Grupo A - jobs imediatos
+      await apiCall('/jobs/batch', 'POST', { count: 3, groupId: 'grupo-a', delay: 0 });
+
+      // Grupo B - jobs com delay
+      await apiCall('/jobs/batch', 'POST', { count: 3, groupId: 'grupo-b', delay: 5000, delayIncrement: 1000 });
+
+      // Grupo C - jobs com delay maior
+      await apiCall('/jobs/batch', 'POST', { count: 3, groupId: 'grupo-c', delay: 10000, delayIncrement: 2000 });
+
+      addEventToList({ timestamp: new Date(), type: 'info', data: { message: 'Criados 3 grupos: grupo-a (imediatos), grupo-b (delay 5s), grupo-c (delay 10s). Tente pausar cada grupo individualmente.' } });
+
+      refreshJobs();
+    }
+
+    // Initialize
+    connectSSE();
+    refreshJobs();
+    setInterval(refreshJobs, 3000); // Refresh a cada 3 segundos
+  </script>
+</body>
+</html>
