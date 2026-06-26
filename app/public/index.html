@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BullMQ Client</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #1a1a2e; color: #eee; padding: 20px;
+    }
+    h1 { text-align: center; margin-bottom: 6px; color: #00d9ff; }
+    .subtitle { text-align: center; color: #888; font-size: 13px; margin-bottom: 20px; }
+    .container { max-width: 1400px; margin: 0 auto; }
+
+    .panel { background: #16213e; padding: 18px; border-radius: 8px; margin-bottom: 20px; }
+    .panel h2, .panel h3 { color: #00d9ff; margin-bottom: 12px; }
+
+    .control-row { display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; }
+    .control-row label { color: #aaa; }
+
+    input, select {
+      padding: 8px 12px; border: 1px solid #444; border-radius: 4px;
+      background: #0f0f23; color: #eee; font-size: 14px;
+    }
+    input.grow { flex: 1; min-width: 280px; }
+
+    button {
+      padding: 9px 18px; border: none; border-radius: 4px; cursor: pointer;
+      font-size: 14px; font-weight: 500; transition: opacity 0.2s;
+    }
+    button:hover { opacity: 0.85; }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-primary { background: #00d9ff; color: #000; }
+    .btn-warning { background: #ffc107; color: #000; }
+    .btn-success { background: #28a745; color: #fff; }
+    .btn-danger { background: #dc3545; color: #fff; }
+    .btn-secondary { background: #6c757d; color: #fff; }
+
+    .conn-status { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; background: #dc3545; }
+    .dot.connected { background: #28a745; }
+
+    .hidden { display: none !important; }
+    .muted { color: #888; font-size: 13px; }
+
+    .queues-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 16px; margin-bottom: 20px;
+    }
+    .queue-section { background: #16213e; border-radius: 8px; padding: 15px; }
+    .queue-section h3 { margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #333; }
+    .queue-section h3 .count { font-size: 14px; color: #888; font-weight: normal; }
+    .waiting h3 { color: #ffc107; } .active h3 { color: #17a2b8; }
+    .delayed h3 { color: #fd7e14; } .paused h3 { color: #6c757d; }
+    .completed h3 { color: #28a745; } .failed h3 { color: #dc3545; }
+
+    .job-list { max-height: 300px; overflow-y: auto; }
+    .job-card { background: #0f0f23; border-radius: 4px; padding: 10px; margin-bottom: 8px; font-size: 13px; }
+    .job-card .job-id { font-weight: bold; color: #00d9ff; }
+    .job-card .job-name { color: #aaa; }
+    .job-card .job-group { color: #ff6b6b; font-size: 12px; }
+    .job-card .job-delay { color: #fd7e14; font-size: 12px; }
+
+    .group-card {
+      background: #0f0f23; border-radius: 4px; padding: 10px 15px; font-size: 13px;
+      border-left: 3px solid #444; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    }
+    .group-card.maxed { border-color: #fd7e14; } .group-card.paused { border-color: #dc3545; }
+    .group-card.limited { border-color: #17a2b8; } .group-card.waiting { border-color: #ffc107; }
+    .group-card .group-id { font-weight: bold; color: #00d9ff; }
+    .group-card .group-status { font-size: 11px; padding: 2px 6px; border-radius: 3px; }
+    .group-card .group-status.paused { background: #dc3545; color: #fff; }
+    .group-card .group-status.maxed { background: #fd7e14; color: #000; }
+    .group-card .group-status.limited { background: #17a2b8; color: #fff; }
+    .group-card .group-status.waiting { background: #ffc107; color: #000; }
+    .group-card .group-jobs { color: #888; font-size: 12px; }
+    .group-card .group-actions { margin-left: auto; display: flex; gap: 6px; }
+    .group-card .group-actions button { padding: 4px 10px; font-size: 12px; }
+
+    .event-list { max-height: 220px; overflow-y: auto; font-family: monospace; font-size: 12px; }
+    .event-item { padding: 5px 8px; margin-bottom: 4px; background: #0f0f23; border-radius: 3px; border-left: 3px solid #444; }
+    .event-item.added { border-color: #00d9ff; } .event-item.connected { border-color: #28a745; }
+    .event-item.group-paused { border-color: #ffc107; } .event-item.group-resumed { border-color: #28a745; }
+    .event-item.group-deleted, .event-item.queue-cleared, .event-item.disconnected { border-color: #dc3545; }
+    .event-item.error { border-color: #dc3545; color: #ff8888; }
+    .event-time { color: #666; } .event-type { font-weight: bold; margin-left: 10px; }
+
+    .empty-state { color: #666; font-style: italic; padding: 10px; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>BullMQ Client</h1>
+    <div class="subtitle">Conecte-se a qualquer aplicação BullMQ e gerencie filas e grupos</div>
+
+    <!-- ===== Barra de conexão ===== -->
+    <div class="panel">
+      <h2>Conexão</h2>
+      <div class="control-row">
+        <input class="grow" type="text" id="redisUrl" placeholder="redis://default:senha@host:6379  ou  rediss://...">
+        <label>Prefixo:</label>
+        <input type="text" id="prefix" value="bull" style="max-width: 90px">
+        <button class="btn-primary" id="btnDiscover" onclick="discoverQueues()">Listar filas</button>
+      </div>
+      <div class="control-row" id="pickRow">
+        <label>Fila:</label>
+        <select id="queueSelect" style="min-width: 220px"></select>
+        <button class="btn-success" id="btnConnect" onclick="connectQueue()">Conectar</button>
+      </div>
+      <div class="control-row">
+        <div class="conn-status">
+          <div class="dot" id="connDot"></div>
+          <span id="connText">Desconectado</span>
+        </div>
+        <button class="btn-danger hidden" id="btnDisconnect" onclick="disconnectQueue()">Desconectar</button>
+      </div>
+    </div>
+
+    <!-- ===== Dashboard (só aparece conectado) ===== -->
+    <div id="dashboard" class="hidden">
+      <div class="panel">
+        <h3>Controles (playground)</h3>
+        <div class="control-row">
+          <label>Group ID:</label>
+          <input type="text" id="groupId" placeholder="ex: group-a" value="group-a">
+          <label>Delay (ms):</label>
+          <input type="number" id="delay" value="5000">
+          <label>Qtd:</label>
+          <input type="number" id="jobCount" value="5" min="1" max="50">
+          <label>Incr. delay:</label>
+          <input type="number" id="delayIncrement" value="1000">
+        </div>
+        <div class="control-row">
+          <button class="btn-primary" onclick="addSingleJob()">+1 Job</button>
+          <button class="btn-primary" onclick="addBatchJobs()">+ Batch</button>
+          <button class="btn-warning" onclick="pauseGroup()">Pausar Grupo</button>
+          <button class="btn-success" onclick="resumeGroup()">Resumir Grupo</button>
+          <button class="btn-danger" onclick="deleteGroup()">Deletar Grupo</button>
+          <button class="btn-danger" onclick="clearQueue()">Esvaziar Fila</button>
+          <button class="btn-secondary" onclick="refreshJobs()">Atualizar</button>
+        </div>
+        <div class="muted">⚠️ Este cliente não roda worker — ele não processa os jobs da fila-alvo, só observa e gerencia.</div>
+      </div>
+
+      <div class="panel">
+        <h3>Grupos <span class="muted" id="groupsCount"></span></h3>
+        <div id="groupsList" style="display: flex; flex-direction: column; gap: 8px;"></div>
+      </div>
+
+      <div class="queues-grid">
+        <div class="queue-section waiting"><h3>Waiting <span class="count" id="waitingCount">(0)</span></h3><div class="job-list" id="waitingJobs"></div></div>
+        <div class="queue-section active"><h3>Active <span class="count" id="activeCount">(0)</span></h3><div class="job-list" id="activeJobs"></div></div>
+        <div class="queue-section delayed"><h3>Delayed <span class="count" id="delayedCount">(0)</span></h3><div class="job-list" id="delayedJobs"></div></div>
+        <div class="queue-section paused"><h3>Paused <span class="count" id="pausedCount">(0)</span></h3><div class="job-list" id="pausedJobs"></div></div>
+        <div class="queue-section completed"><h3>Completed <span class="count" id="completedCount">(0)</span></h3><div class="job-list" id="completedJobs"></div></div>
+        <div class="queue-section failed"><h3>Failed <span class="count" id="failedCount">(0)</span></h3><div class="job-list" id="failedJobs"></div></div>
+      </div>
+
+      <div class="panel">
+        <h3>Log de ações</h3>
+        <div class="event-list" id="eventList"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let eventSource = null;
+    let pollTimer = null;
+    let connected = false;
+
+    async function api(endpoint, method = 'GET', body = null) {
+      const opts = { method, headers: { 'Content-Type': 'application/json' } };
+      if (body) opts.body = JSON.stringify(body);
+      const res = await fetch(`/api${endpoint}`, opts);
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
+      return json;
+    }
+
+    // ===== Conexão =====
+    async function discoverQueues() {
+      const redisUrl = document.getElementById('redisUrl').value.trim();
+      const prefix = document.getElementById('prefix').value.trim() || 'bull';
+      if (!redisUrl) return alert('Informe a Redis URL');
+      const btn = document.getElementById('btnDiscover');
+      btn.disabled = true; btn.textContent = 'Buscando...';
+      try {
+        const { queues } = await api('/queues/discover', 'POST', { redisUrl, prefix });
+        const select = document.getElementById('queueSelect');
+        if (!queues.length) {
+          select.innerHTML = '<option value="">nenhuma fila encontrada</option>';
+          alert(`Nenhuma fila com prefixo "${prefix}" encontrada nesse Redis.`);
+        } else {
+          select.innerHTML = queues.map(q => `<option value="${q}">${q}</option>`).join('');
+        }
+      } catch (err) {
+        alert('Erro ao listar filas: ' + err.message);
+      } finally {
+        btn.disabled = false; btn.textContent = 'Listar filas';
+      }
+    }
+
+    async function connectQueue() {
+      const redisUrl = document.getElementById('redisUrl').value.trim();
+      const prefix = document.getElementById('prefix').value.trim() || 'bull';
+      const queueName = document.getElementById('queueSelect').value;
+      if (!queueName) return alert('Escolha uma fila (clique em "Listar filas" primeiro)');
+      try {
+        const status = await api('/connect', 'POST', { redisUrl, prefix, queueName });
+        applyConnected(status);
+      } catch (err) {
+        alert('Erro ao conectar: ' + err.message);
+      }
+    }
+
+    async function disconnectQueue() {
+      await api('/disconnect', 'POST').catch(() => {});
+      applyDisconnected();
+    }
+
+    function applyConnected(status) {
+      connected = true;
+      document.getElementById('connDot').classList.add('connected');
+      document.getElementById('connText').textContent =
+        `Conectado — fila "${status.queueName}" (${status.prefix}) em ${status.redisUrl}`;
+      document.getElementById('btnDisconnect').classList.remove('hidden');
+      document.getElementById('dashboard').classList.remove('hidden');
+      connectSSE();
+      refreshJobs();
+      if (pollTimer) clearInterval(pollTimer);
+      pollTimer = setInterval(refreshJobs, 5000); // 5s para aliviar carga no Redis
+    }
+
+    function applyDisconnected() {
+      connected = false;
+      document.getElementById('connDot').classList.remove('connected');
+      document.getElementById('connText').textContent = 'Desconectado';
+      document.getElementById('btnDisconnect').classList.add('hidden');
+      document.getElementById('dashboard').classList.add('hidden');
+      if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+      if (eventSource) { eventSource.close(); eventSource = null; }
+    }
+
+    // ===== SSE (log de ações) =====
+    function connectSSE() {
+      if (eventSource) eventSource.close();
+      eventSource = new EventSource('/api/events/stream');
+      eventSource.onmessage = (e) => { addEventToList(JSON.parse(e.data)); refreshJobs(); };
+    }
+    function addEventToList(event) {
+      const list = document.getElementById('eventList');
+      const time = new Date(event.timestamp).toLocaleTimeString();
+      const div = document.createElement('div');
+      div.className = `event-item ${event.type}`;
+      div.innerHTML = `<span class="event-time">${time}</span><span class="event-type">${event.type}</span> <span>${JSON.stringify(event.data)}</span>`;
+      list.insertBefore(div, list.firstChild);
+      while (list.children.length > 50) list.removeChild(list.lastChild);
+    }
+
+    // ===== Jobs / Grupos =====
+    async function refreshJobs() {
+      if (!connected) return;
+      try {
+        const jobs = await api('/jobs');
+        for (const t of ['waiting', 'active', 'delayed', 'paused', 'completed', 'failed']) {
+          renderJobs(t, jobs[t] || []);
+        }
+        await refreshGroups();
+      } catch (err) {
+        if (String(err.message).includes('409')) applyDisconnected();
+      }
+    }
+
+    async function refreshGroups() {
+      const groups = await api('/groups').catch(() => []);
+      const container = document.getElementById('groupsList');
+      document.getElementById('groupsCount').textContent = `(${groups.length})`;
+      if (!groups.length) { container.innerHTML = '<div class="empty-state">Nenhum grupo (fila sem grupos ou não-Pro)</div>'; return; }
+      container.innerHTML = groups.map(g => `
+        <div class="group-card ${g.status}">
+          <span class="group-id">${g.id}</span>
+          <span class="group-status ${g.status}">${(g.status || '').toUpperCase()}</span>
+          <span class="group-jobs">${g.jobsCount} waiting | ${g.delayedJobsCount} delayed | ${g.totalJobsCount} total</span>
+          <span class="group-actions">
+            <button class="btn-warning" onclick="pauseGroup('${g.id}')">Pausar</button>
+            <button class="btn-success" onclick="resumeGroup('${g.id}')">Resumir</button>
+            <button class="btn-danger" onclick="deleteGroup('${g.id}')">Deletar</button>
+          </span>
+        </div>`).join('');
+    }
+
+    function renderJobs(type, jobs) {
+      const container = document.getElementById(`${type}Jobs`);
+      document.getElementById(`${type}Count`).textContent = `(${jobs.length})`;
+      if (!jobs.length) { container.innerHTML = '<div class="empty-state">Nenhum job</div>'; return; }
+      container.innerHTML = jobs.map(job => {
+        let delayText = '';
+        if (job.delayRemaining !== undefined && job.delayRemaining > 0) {
+          delayText = `<div class="job-delay">Delay restante: ${Math.ceil(job.delayRemaining / 1000)}s</div>`;
+        } else if (job.delay) {
+          delayText = `<div class="job-delay">Delay: ${job.delay}ms</div>`;
+        }
+        return `<div class="job-card">
+          <div class="job-id">ID: ${job.id}</div>
+          <div class="job-name">${job.name}</div>
+          ${job.group ? `<div class="job-group">Group: ${job.group}</div>` : ''}
+          ${delayText}
+        </div>`;
+      }).join('');
+    }
+
+    // ===== Ações =====
+    function gid(arg) { return arg || document.getElementById('groupId').value; }
+
+    async function addSingleJob() {
+      const groupId = document.getElementById('groupId').value || undefined;
+      const delay = parseInt(document.getElementById('delay').value) || undefined;
+      await api('/jobs', 'POST', { name: 'single-job', data: { test: true }, groupId, delay });
+      refreshJobs();
+    }
+    async function addBatchJobs() {
+      const groupId = document.getElementById('groupId').value || undefined;
+      const delay = parseInt(document.getElementById('delay').value) || undefined;
+      const count = parseInt(document.getElementById('jobCount').value) || 5;
+      const delayIncrement = parseInt(document.getElementById('delayIncrement').value) || 0;
+      await api('/jobs/batch', 'POST', { count, groupId, delay, delayIncrement });
+      refreshJobs();
+    }
+    async function pauseGroup(arg) {
+      const id = gid(arg); if (!id) return alert('Informe um Group ID');
+      await api(`/groups/${encodeURIComponent(id)}/pause`, 'POST'); refreshJobs();
+    }
+    async function resumeGroup(arg) {
+      const id = gid(arg); if (!id) return alert('Informe um Group ID');
+      await api(`/groups/${encodeURIComponent(id)}/resume`, 'POST'); refreshJobs();
+    }
+    async function deleteGroup(arg) {
+      const id = gid(arg); if (!id) return alert('Informe um Group ID');
+      if (!confirm(`Deletar o grupo "${id}" (waiting + delayed)?`)) return;
+      await api(`/groups/${encodeURIComponent(id)}`, 'DELETE'); refreshJobs();
+    }
+    async function clearQueue() {
+      if (!confirm('Esvaziar TODA a fila (obliterate)? Isso apaga todos os jobs.')) return;
+      await api('/jobs', 'DELETE'); refreshJobs();
+    }
+
+    // ===== Init: restaura estado se já houver conexão ativa =====
+    (async function init() {
+      try {
+        const status = await api('/connection');
+        if (status.connected) {
+          document.getElementById('prefix').value = status.prefix;
+          applyConnected(status);
+        }
+      } catch { /* offline */ }
+    })();
+  </script>
+</body>
+</html>

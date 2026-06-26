@@ -1,0 +1,20 @@
+# Blueprint do Render para a app-alvo (produtora BullMQ Pro).
+# O Redis é externo (Upstash) — defina REDIS_URL no dashboard.
+# O token do BullMQ Pro entra como SECRET FILE (.npmrc), não aqui.
+services:
+  - type: web
+    name: bullmq-demo-target
+    runtime: node
+    rootDir: demo-app
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: REDIS_URL        # rediss://default:SENHA@host.upstash.io:6379  (defina como secret no dashboard)
+        sync: false
+      - key: QUEUE_NAME
+        value: demo-queue
+      - key: QUEUE_PREFIX
+        value: bull
+      - key: ENABLE_WORKER    # "true" para processar jobs; "false" deixa acumulado p/ inspeção
+        value: "false"
